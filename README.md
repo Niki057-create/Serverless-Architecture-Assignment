@@ -1,4 +1,4 @@
-## Archive Old Files from S3 to Glacier Using AWS Lambda and Boto3
+## 1. Archive Old Files from S3 to Glacier Using AWS Lambda and Boto3
 
 ### Objective: To automate the archival of files older than a certain age from an S3 bucket to Amazon Glacier for cost-effective storage.
 
@@ -43,3 +43,99 @@ def lambda_handler(event, context):
             print(f"File is recent, not archiving: {key}")
 
 ### Documentation with Screenshots: [S3_Glacier_Assignment_Formatted_With_Screenshots.docx](https://github.com/user-attachments/files/23750914/S3_Glacier_Assignment_Formatted_With_Screenshots.docx)
+
+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+## 2.  Monitor Unencrypted S3 Buckets Using AWS Lambda and Boto3
+
+### Objective: To enhance the AWS security posture by setting up a Lambda function that detects any S3 bucket without server-side encryption.
+
+### Boto3 Python Script/Lambda Code:
+import boto3
+
+def lambda_handler(event, context):
+    s3 = boto3.client('s3')
+
+    print("Starting Lambda execution...")
+
+    # List all buckets
+    response = s3.list_buckets()
+    buckets = response['Buckets']
+    print(f"Total buckets in account: {len(buckets)}")
+
+    unencrypted_buckets = []
+
+    # 👇 For safety, only check first 20 buckets (you can change this number)
+    buckets_to_check = buckets[:20]
+
+    for bucket in buckets_to_check:
+        bucket_name = bucket['Name']
+        print(f"Checking bucket: {bucket_name}")
+
+        try:
+            enc = s3.get_bucket_encryption(Bucket=bucket_name)
+            # If this call does NOT raise an error, encryption exists
+            print(f"✅ {bucket_name} has encryption configured")
+        except Exception:
+            # If encryption is not enabled or config not found
+            print(f"❌ {bucket_name} does NOT have server-side encryption")
+            unencrypted_buckets.append(bucket_name)
+
+    print("Buckets without server-side encryption:")
+    for b in unencrypted_buckets:
+        print(b)
+
+    return {
+        'unencrypted_buckets': unencrypted_buckets
+    }
+
+### Documentation with Screenshots: [Monitor Unencrypted S3 Buckets Using AWS Lambda and Boto3.docx](https://github.com/user-attachments/files/23751372/Monitor.Unencrypted.S3.Buckets.Using.AWS.Lambda.and.Boto3.docx)
+
+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+
+## 3. Automated S3 Bucket Cleanup Using AWS Lambda and Boto3
+
+### Objective: To gain experience with AWS Lambda and Boto3 by creating a Lambda function that will automatically clean up old files in an S3 bucket.
+
+### Boto3 Python Script/Lambda Code:
+import boto3
+from datetime import datetime, timezone, timedelta
+
+# CONFIGURATION
+BUCKET_NAME = 'nikitha-s3-cleanup-bucket'  # change if needed
+DAYS_THRESHOLD = 30
+
+def lambda_handler(event, context):
+    s3 = boto3.client('s3')
+    cutoff = datetime.now(timezone.utc) - timedelta(days=DAYS_THRESHOLD)
+    print(f"Running cleanup for bucket: {BUCKET_NAME}")
+    print(f"Cutoff datetime (UTC): {cutoff.isoformat()}")
+
+    deleted_files = []
+    paginator = s3.get_paginator('list_objects_v2')
+
+    # Iterate through all objects in the bucket
+    for page in paginator.paginate(Bucket=BUCKET_NAME):
+        for obj in page.get('Contents', []):
+            key = obj['Key']
+            last_modified = obj['LastModified']
+
+            # Compare date to cutoff
+            if last_modified < cutoff:
+                print(f"Deleting: {key} (LastModified: {last_modified})")
+                s3.delete_object(Bucket=BUCKET_NAME, Key=key)
+                deleted_files.append(key)
+
+    print(f"Deleted files: {deleted_files}")
+
+    return {
+        'statusCode': 200,
+        'body': f"Deleted {len(deleted_files)} old files: {deleted_files}"
+    }
+
+### Documentation with Screenshots: [Automated S3 Bucket Cleanup Using AWS Lambda and Boto3.docx](https://github.com/user-attachments/files/23751674/Automated.S3.Bucket.Cleanup.Using.AWS.Lambda.and.Boto3.docx)
+
+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+

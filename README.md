@@ -3,6 +3,7 @@
 ### Objective: To automate the archival of files older than a certain age from an S3 bucket to Amazon Glacier for cost-effective storage.
 
 ### Boto3 Python Script/Lambda Code:
+
 import boto3
 from datetime import datetime, timezone, timedelta
 
@@ -41,6 +42,7 @@ def lambda_handler(event, context):
             )
         else:
             print(f"File is recent, not archiving: {key}")
+
 
 ### Documentation with Screenshots: [S3_Glacier_Assignment_Formatted_With_Screenshots.docx](https://github.com/user-attachments/files/23750914/S3_Glacier_Assignment_Formatted_With_Screenshots.docx)
 
@@ -138,4 +140,52 @@ def lambda_handler(event, context):
 
 ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
+## 4. Automated SNS Alerts for EC2 Disk Space Utilization
+
+### Objective: To set up a Lambda function that checks EC2 instances for disk space utilization, sending an SNS alert if utilization exceeds 85%.
+
+### Boto3 Python Script/Lambda Code:
+
+import os
+import boto3
+from datetime import datetime, timedelta, timezone
+
+cloudwatch = boto3.client('cloudwatch')
+sns = boto3.client('sns')
+
+INSTANCE_ID = os.environ['INSTANCE_ID']
+SNS_TOPIC_ARN = os.environ['SNS_TOPIC_ARN']
+THRESHOLD = float(os.environ.get('THRESHOLD', '85'))
+
+def lambda_handler(event, context):
+    end_time = datetime.now(timezone.utc)
+    start_time = end_time - timedelta(minutes=10)
+
+    response = cloudwatch.get_metric_statistics(
+        Namespace='CWAgent',
+        MetricName='disk_used_percent',
+        Dimensions=[{'Name': 'InstanceId', 'Value': INSTANCE_ID}],
+        StartTime=start_time,
+        EndTime=end_time,
+        Period=300,
+        Statistics=['Average']
+    )
+
+    datapoints = response.get('Datapoints', [])
+
+    if not datapoints:
+        print("No disk metrics yet. Possibly waiting for agent publish or permissions blocked.")
+        return
+
+    latest = sorted(datapoints, key=lambda x: x['Timestamp'])[-1]
+    usage = latest['Average']
+
+    if usage >= THRESHOLD:
+        alert_message = f"Disk usage is {usage:.2f}% on instance {INSTANCE_ID}"
+        sns.publish(TopicArn=SNS_TOPIC_ARN, Message=alert_message, Subject="EC2 Disk Alert")
+        return {"status": "Alert sent"}
+
+    return {"status": f"Disk OK ({usage:.2f}%)"}
+
+### Documentation with Screenshots: [Automated SNS Alerts for EC2 Disk Space Utilization.docx](https://github.com/user-attachments/files/23752447/Automated.SNS.Alerts.for.EC2.Disk.Space.Utilization.docx)
 

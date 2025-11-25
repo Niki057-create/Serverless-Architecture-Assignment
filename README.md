@@ -102,10 +102,11 @@ def lambda_handler(event, context):
 ### Objective: To gain experience with AWS Lambda and Boto3 by creating a Lambda function that will automatically clean up old files in an S3 bucket.
 
 ### Boto3 Python Script/Lambda Code:
+
 import boto3
+
 from datetime import datetime, timezone, timedelta
 
-# CONFIGURATION
 BUCKET_NAME = 'nikitha-s3-cleanup-bucket'  # change if needed
 DAYS_THRESHOLD = 30
 
@@ -148,7 +149,9 @@ def lambda_handler(event, context):
 ### Boto3 Python Script/Lambda Code:
 
 import os
+
 import boto3
+
 from datetime import datetime, timedelta, timezone
 
 cloudwatch = boto3.client('cloudwatch')
